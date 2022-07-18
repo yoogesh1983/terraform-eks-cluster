@@ -1,4 +1,14 @@
-resource "aws_iam_role" "nodes_general" {
+/*
+  Set up an IAM role for the worker nodes. The process is similar to the IAM role creation for the EKS cluster except this time the policies that you attach
+  will be for the EKS worker node policies. The policies include:
+    - AmazonEKSWorkerNodePolicy
+    - AmazonEKS_CNI_Policy
+    - EC2InstanceProfileForImageBuilderECRContainerBuilds
+    - AmazonEC2ContainerRegistryReadOnly
+*/
+
+
+resource "aws_iam_role" "workernodes" {
   # The name of the role
   name = "eks-node-group-general"
 
@@ -15,36 +25,41 @@ resource "aws_iam_role" "nodes_general" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "amazon_eks_worker_node_policy_general" {
+resource "aws_iam_role_policy_attachment" "AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.nodes_general.name
-}
-
-resource "aws_iam_role_policy_attachment" "amazon_eks_cni_policy_general" {
+  role    = aws_iam_role.workernodes.name
+ }
+ 
+ resource "aws_iam_role_policy_attachment" "AmazonEKS_CNI_Policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.nodes_general.name
-}
-
-resource "aws_iam_role_policy_attachment" "amazon_ec2_container_registry_read_only" {
-  # https://github.com/SummitRoute/aws_managed_policies/blob/master/policies/AmazonEC2ContainerRegistryReadOnly
+  role    = aws_iam_role.workernodes.name
+ }
+ 
+ resource "aws_iam_role_policy_attachment" "EC2InstanceProfileForImageBuilderECRContainerBuilds" {
+  policy_arn = "arn:aws:iam::aws:policy/EC2InstanceProfileForImageBuilderECRContainerBuilds"
+  role    = aws_iam_role.workernodes.name
+ }
+ 
+ resource "aws_iam_role_policy_attachment" "AmazonEC2ContainerRegistryReadOnly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.nodes_general.name
-}
+  role    = aws_iam_role.workernodes.name
+ }
 
-resource "aws_eks_node_group" "nodes_general" {
+
+resource "aws_eks_node_group" "worker-node-group" {
 
   # Name of the eks cluster
   cluster_name    = aws_eks_cluster.eks.name
-  node_group_name = "nodes-general"
+  node_group_name = "worker-nodes"
   # Amazon Resource name (ARN) of the IAM role that provides permission for the eks
-  node_role_arn = aws_iam_role.nodes_general.arn
+  node_role_arn = aws_iam_role.workernodes.arn
 
   # Identifies of ec2 subnets to associate with the EKS Node group
   # These subnets must have the following resource tag: kubernetes.io/cluster/CLUSTER_NANE where cluster name is replaced with
   # the name of the EKS cluster
   subnet_ids = [
-    aws_subnet.private_1.id,
-    aws_subnet.private_2.id
+      module.my-custom-vpc.subnet-private1,
+      module.my-custom-vpc.subnet-private2
   ]
 
   # Configuration block with scaling settings
@@ -85,8 +100,9 @@ resource "aws_eks_node_group" "nodes_general" {
   #version = "1.22"
 
   depends_on = [
-    aws_iam_role_policy_attachment.amazon_eks_worker_node_policy_general,
-    aws_iam_role_policy_attachment.amazon_eks_cni_policy_general,
-    aws_iam_role_policy_attachment.amazon_ec2_container_registry_read_only,
+    aws_iam_role_policy_attachment.AmazonEKSWorkerNodePolicy,
+    aws_iam_role_policy_attachment.AmazonEKS_CNI_Policy,
+    aws_iam_role_policy_attachment.EC2InstanceProfileForImageBuilderECRContainerBuilds,
+    aws_iam_role_policy_attachment.AmazonEC2ContainerRegistryReadOnly,
   ]
 }

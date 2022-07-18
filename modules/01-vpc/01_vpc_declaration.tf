@@ -1,3 +1,6 @@
+/* -----------------------------------
+  Step 1: Create a vpc
+  ----------------------------------- */
 resource "aws_vpc" "main" {
   # The CIDR block for the vpc
   cidr_block = "192.168.0.0/16"
@@ -11,12 +14,12 @@ resource "aws_vpc" "main" {
   enable_classiclink_dns_support   = false
   assign_generated_ipv6_cidr_block = false
   tags = {
-    Name = "main"
+    Name = "yms-custom-vpc"
   }
 }
 
 output "vpc_id" {
+  description = "VPC ID"
   value       = aws_vpc.main.id
-  description = "VPC id."
   sensitive   = false
 }
